@@ -37,12 +37,23 @@ func TestCtx(t *testing.T) {
 		return ctx.SendString("Hello " + name)
 	})
 
-	request := httptest.NewRequest("GET", "/hello?name=Adit", nil)
+	request := httptest.NewRequest("GET", "/hello", nil)
 	response, err := app.Test(request)
 
 	assert.Nil(t, err)
+	assert.Equal(t, 200, response.StatusCode)
 
 	bytes, err := io.ReadAll(response.Body)
+	assert.Nil(t, err)
+	assert.Equal(t, "Hello Guest", string(bytes))
+
+	request = httptest.NewRequest("GET", "/hello?name=Adit", nil)
+	response, err = app.Test(request)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	bytes, err = io.ReadAll(response.Body)
 	assert.Nil(t, err)
 	assert.Equal(t, "Hello Adit", string(bytes))
 
