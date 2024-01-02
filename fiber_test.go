@@ -6,11 +6,15 @@ package main
 */
 
 import (
+	"bytes"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	_ "embed"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +22,8 @@ import (
 
 var (
 	app = fiber.New()
+	//go:embed source/contoh.txt
+	contohFile []byte
 )
 
 func TestRoutingHelloWorld(t *testing.T) {
@@ -127,5 +133,41 @@ func TestFormRequest(t *testing.T) {
 	bytes, err := io.ReadAll(response.Body)
 	assert.Nil(t, err)
 	assert.Equal(t, "Hello Muhammad Aditya", string(bytes))
+
+}
+
+func TestFormUpload(t *testing.T) {
+
+	app.Post("/upload", func(ctx *fiber.Ctx) error {
+		file, err := ctx.FormFile("file")
+		if err != nil {
+			return err
+		}
+
+		err = ctx.SaveFile(file, "./target/"+file.Filename)
+		if err != nil {
+			return err
+		}
+
+		return ctx.SendString("Upload Success")
+	})
+
+	// unit tesnya
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	file, err := writer.CreateFormFile("file", "contoh.txt")
+	assert.Nil(t, err)
+	file.Write(contohFile)
+	writer.Close()
+
+	request := httptest.NewRequest("POST", "/upload", body)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	response, err := app.Test(request)
+	assert.Nil(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	bytes, err := io.ReadAll(response.Body)
+	assert.Nil(t, err)
+	assert.Equal(t, "Upload Success", string(bytes))
 
 }
