@@ -1,9 +1,15 @@
 package main
 
+/*
+	- tambahkan testify
+	- tambahkan fiber
+*/
+
 import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -71,6 +77,48 @@ func TestHttpRequest(t *testing.T) {
 	request := httptest.NewRequest("GET", "/request", nil)
 	request.Header.Set("firstname", "Muhammad")
 	request.AddCookie(&http.Cookie{Name: "lastname", Value: "Aditya"})
+
+	response, err := app.Test(request)
+	assert.Nil(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	bytes, err := io.ReadAll(response.Body)
+	assert.Nil(t, err)
+	assert.Equal(t, "Hello Muhammad Aditya", string(bytes))
+
+}
+
+func TestRouteParameter(t *testing.T) {
+
+	app.Get("/users/:userId/orders/:orderId", func(ctx *fiber.Ctx) error {
+		userId := ctx.Params("userId")
+		orederId := ctx.Params("orderId")
+		return ctx.SendString("Get order " + orederId + " from user " + userId)
+	})
+
+	request := httptest.NewRequest("GET", "/users/1/orders/2", nil)
+
+	response, err := app.Test(request)
+	assert.Nil(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	bytes, err := io.ReadAll(response.Body)
+	assert.Nil(t, err)
+	assert.Equal(t, "Get order 2 from user 1", string(bytes))
+
+}
+
+func TestFormRequest(t *testing.T) {
+
+	app.Post("/hello", func(ctx *fiber.Ctx) error {
+		name := ctx.FormValue("name")
+		return ctx.SendString("Hello " + name)
+	})
+
+	body := strings.NewReader("name=Muhammad Aditya")
+
+	request := httptest.NewRequest("POST", "/hello", body)
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	response, err := app.Test(request)
 	assert.Nil(t, err)
